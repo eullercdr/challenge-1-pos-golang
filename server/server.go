@@ -13,9 +13,9 @@ import (
 
 const UrlDolarExchange = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
 
-const MillisecondTimeoutApi = 200
+const MillisecondTimeoutApi = 200 * time.Millisecond
 
-const MillisecondTimeoutDb = 10
+const MillisecondTimeoutDb = 10 * time.Millisecond
 
 type DollarExchangeRate struct {
 	USDBRL struct {
@@ -33,6 +33,10 @@ type DollarExchangeRate struct {
 	} `json:"USDBRL"`
 }
 
+type DollarExchangeRateResponse struct {
+	Bid string `json:"bid"`
+}
+
 func main() {
 	http.HandleFunc("/", GetDollarExchangeRateHandler)
 	http.ListenAndServe(":8080", nil)
@@ -47,7 +51,8 @@ func GetDollarExchangeRateHandler(writer http.ResponseWriter, request *http.Requ
 	SaveCurrentDolar()
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusOK)
-	json.NewEncoder(writer).Encode(dollarExchangeRate)
+	print(dollarExchangeRate.USDBRL.Bid)
+	json.NewEncoder(writer).Encode(DollarExchangeRateResponse{Bid: dollarExchangeRate.USDBRL.Bid})
 }
 
 func SaveCurrentDolar() {
@@ -73,7 +78,7 @@ func InitDb() *sql.DB {
 }
 
 func InsertCurrentDolar(db *sql.DB, dolar *DollarExchangeRate) error {
-	ctx, cancel := context.WithTimeout(context.Background(), MillisecondTimeoutDb*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), MillisecondTimeoutDb)
 	defer cancel()
 	statement, err := db.PrepareContext(ctx, "INSERT INTO dolar (bid) VALUES (?)")
 	if err != nil {
@@ -87,7 +92,7 @@ func InsertCurrentDolar(db *sql.DB, dolar *DollarExchangeRate) error {
 }
 
 func CurrentDollarExchangeRate() (*DollarExchangeRate, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), MillisecondTimeoutApi*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), MillisecondTimeoutApi)
 	defer cancel()
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, UrlDolarExchange, nil)
 	if err != nil {
